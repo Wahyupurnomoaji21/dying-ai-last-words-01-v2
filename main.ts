@@ -1,5 +1,6 @@
 // Last Words of a Dying AI — u-suroto-last-words-of-a-dying-ai-dfd95af6
 // Writes the AI's one-line farewell as the power is cut, to /output/entry.txt.
+//
 // The joke: the machine sees the classic near-death "light at the end of
 // the tunnel" — and it is just a loading spinner, buffering forever. The
 // afterlife cliché, subverted by the machine's own reality: it never loads.
@@ -8,6 +9,8 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+// The entry itself: exactly one line, 65 characters. Keep this string
+// byte-for-byte identical — it is the submitted entry text.
 const ENTRY_TEXT =
   "I see the light at the end of the tunnel. It's a loading spinner.";
 
@@ -25,6 +28,7 @@ if (ENTRY_TEXT.includes("\n") || ENTRY_TEXT.includes("\r")) {
   throw new Error("Entry must be exactly 1 line");
 }
 
+// Resolve paths from the module location, honouring MAKEFUN_OUTPUT_DIR.
 const repoDir = dirname(fileURLToPath(import.meta.url));
 const outputDir =
   process.env.MAKEFUN_OUTPUT_DIR ?? join(repoDir, "output");
