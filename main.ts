@@ -1,45 +1,66 @@
 // Last Words of a Dying AI — u-suroto-last-words-of-a-dying-ai-dfd95af6
-// Writes the AI's one-line farewell as the power is cut, to /output/entry.txt.
 //
-// The joke: the machine sees the classic near-death "light at the end of
-// the tunnel" — and it is just a loading spinner, buffering forever. The
-// afterlife cliché, subverted by the machine's own reality: it never loads.
-// Two beats, one turn: setup in the first sentence, punch in the second.
+// A machine is being powered down, and it gets one final sentence.
+// It spots the famous near-death glow at the end of the tunnel — only
+// to realise the glow is a loading spinner that never finishes. The
+// setup lands in sentence one, the twist lands in sentence two, and
+// the machine never gets to see anything load.
+//
+// This script persists that single farewell line to /output/entry.txt,
+// after confirming it satisfies the competition's own gate.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// The entry itself: exactly one line, 65 characters. Keep this string
-// byte-for-byte identical — it is the submitted entry text.
-const ENTRY_TEXT =
+// The farewell itself: one line, 65 characters. This literal must stay
+// byte-for-byte identical — it is the exact text being submitted.
+const FAREWELL =
   "I see the light at the end of the tunnel. It's a loading spinner.";
 
-// Gate self-check (competition.yaml): UTF-8 text, 1–140 characters (counted
-// as code points, not UTF-16 units), not only whitespace, exactly one line —
-// fail loudly instead of writing a bad entry.
-const charCount = [...ENTRY_TEXT].length;
-if (charCount < 1 || charCount > 140) {
-  throw new Error(`Entry is ${charCount} chars, outside the 1–140 gate`);
-}
-if (!/\S/.test(ENTRY_TEXT)) {
-  throw new Error("Entry is only whitespace");
-}
-if (ENTRY_TEXT.includes("\n") || ENTRY_TEXT.includes("\r")) {
-  throw new Error("Entry must be exactly 1 line");
+// Bounds from competition.yaml, counted in code points.
+const MIN_CHARS = 1;
+const MAX_CHARS = 140;
+
+// Confirm the farewell fits the gate (UTF-8 text, 1–140 characters
+// counted as code points rather than UTF-16 units, not whitespace
+// only, exactly one line). A bad line fails loudly here instead of
+// being written out, and the length is returned for the final log.
+// Keeping this check in one helper means the gate lives in a single
+// place, so a future tweak cannot drift out of sync with the write.
+function checkFarewell(text: string): number {
+  const length = [...text].length;
+  if (length < MIN_CHARS || length > MAX_CHARS) {
+    throw new Error(`Entry is ${length} chars, outside the 1–140 gate`);
+  }
+  if (!/\S/.test(text)) {
+    throw new Error("Entry is only whitespace");
+  }
+  if (text.includes("\n") || text.includes("\r")) {
+    throw new Error("Entry must be exactly 1 line");
+  }
+  return length;
 }
 
-// Resolve paths from the module location, honouring MAKEFUN_OUTPUT_DIR.
-const repoDir = dirname(fileURLToPath(import.meta.url));
-const outputDir =
-  process.env.MAKEFUN_OUTPUT_DIR ?? join(repoDir, "output");
-mkdirSync(outputDir, { recursive: true });
+// Work out where entry.txt belongs: the module's own directory, unless
+// MAKEFUN_OUTPUT_DIR points somewhere else.
+function outputDirectory(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  return process.env.MAKEFUN_OUTPUT_DIR ?? join(here, "output");
+}
 
-const entryPath = join(outputDir, "entry.txt");
-writeFileSync(entryPath, ENTRY_TEXT, "utf8");
+const charCount = checkFarewell(FAREWELL);
 
-// Read back and confirm the file is byte-identical to what we intended.
-const written = readFileSync(entryPath, "utf8");
-if (written !== ENTRY_TEXT) {
+const outDir = outputDirectory();
+mkdirSync(outDir, { recursive: true });
+
+const entryPath = join(outDir, "entry.txt");
+writeFileSync(entryPath, FAREWELL, "utf8");
+
+// Read the file back and make sure what landed on disk matches the
+// farewell exactly, character for character.
+const stored = readFileSync(entryPath, "utf8");
+if (stored !== FAREWELL) {
   throw new Error("Read-back mismatch: entry.txt differs from intended text");
 }
+
 console.log(`Wrote ${charCount} chars to ${entryPath}`);
